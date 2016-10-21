@@ -8,12 +8,13 @@ BEGIN {unshift @INC, getcwd()}
 
 use Message;
 use Command;
+use NetworkInterface;
 
-my $m = Message->new();
+my $m = Message->new(level=>'debug');
 my $r = Command->new(m=>$m);
+my $net = NetworkInterface->new(m=>$m);
 
-$m->info('hello');
-$r->exec('ls');
-$m->info($r->out);
-$m->info($r->ret);
-$m->info($r->cmd);
+$net->get_virtual_networks_config();
+$net->create_virtual_network();
+$net->get_interface_ip();
+$net->remove_virtual_network('');

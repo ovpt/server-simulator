@@ -6,7 +6,7 @@ use warnings;
 
 sub new {
     my ($class, %args) = @_;
-    my $self = bless({level => 'info'}, $class);
+    my $self = bless({level => defined $args{level}?$args{level}:'info'}, $class);
     return $self;
 }
 
