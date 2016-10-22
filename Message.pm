@@ -16,8 +16,10 @@ sub p {
                      info => '+',
                      warn => '-',
                      error => '!');
-    $msg =~ s/\n/ /g;
-    print "[$identifer{$level}] $msg\n";
+    my @lines = split('\n', $msg);
+    foreach (@lines) {
+       print "[$identifer{$level}] $_\n";
+    }
 }
 
 sub debug {
