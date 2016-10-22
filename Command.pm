@@ -19,7 +19,7 @@ sub exec {
     my ($self, $cmd) = @_;
     $$self{m}->info('exec '.$cmd);
     $$self{cmd} = $cmd;
-    $$self{out} = `$cmd`;
+    $$self{out} = `$cmd 2>&1`;
     $$self{ret} = $?;
     $$self{m}->debug('return value '.$$self{ret});
     $$self{m}->debug('stdout '.$$self{out});

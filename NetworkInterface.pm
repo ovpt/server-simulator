@@ -3,10 +3,8 @@ package NetworkInterface;
 use strict;
 use warnings;
 use Cwd;
-use Data::Dumper;
 
 BEGIN {unshift @INC, getcwd()}
-
 use parent 'Command';
 
 
