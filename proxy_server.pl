@@ -29,7 +29,7 @@ sub usage {
     print "usage: $0 options\n";
     print "\t-l list all proxy servers\n";
     print "\t-c create a new prox server\n";
-    print "\t-r remove a proxy server\n";
+    print "\t-r remove a proxy server by ip\n";
     print "\n";
     exit 1;
 }
@@ -101,7 +101,7 @@ sub create_httpd_ssl_conf {
 
 # main
 my %option;
-getopts('lcr', \%option) or usage();
+getopts('lcr:', \%option) or usage();
 validate_option(\%option);
 
 # create new proxy server
@@ -143,4 +143,9 @@ if (defined $option{l}) {
 
 # remove proxy server by ip
 if (defined $option{r}) {
+    usage() unless $option{r};
+    # stop container
+    # remove container
+    # remove virtual network
+    $net->remove_virtual_network($option{r});
 }

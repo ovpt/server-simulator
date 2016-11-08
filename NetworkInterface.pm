@@ -89,9 +89,14 @@ sub create_virtual_network {
     close $fh;
     %{$$self{ifcfgs}->{$next_seq}} = (device=>$device, abs_path=>$new_cfg, obtained_ip=>'');
     my $obtained_ip = $self->interface_up($device);
+
     $self->exec("echo '#obtained_ip=$obtained_ip' >> $new_cfg");
+    
+    # it seems cannot set interface:2 to dhcp
     $self->update_virtual_network_cfg_file($device, $obtained_ip);
     $self->interface_down($device);
+    # remove dhclient.lease file
+    $self->exec("rm -rf /var/lib/dhclient/dhclient--$device.lease");
     return $self->interface_up($device);
 }
 
@@ -113,6 +118,7 @@ sub update_virtual_network_cfg_file {
     print $fh "NETMASK=255.255.252.0\n";
     print $fh "GATEWAY=15.114.112.1\n";
     print $fh "DNS=16.110.135.51\n";
+    print $fh "#obtained_ip=$ip";
     close $fh;
 }
 
@@ -121,6 +127,11 @@ sub interface_up {
     my $cmd = 'ifup '.$device;
     my $ip = '';
     $self->exec($cmd);
+
+    # workaround: interface may need some time to get an ip address
+    # hardcoded wait
+    #sleep(10);
+
     if ($self->is_success) {
         $ip = $self->get_interface_last_ip();
         # should provent no new interface is up at this time
@@ -128,6 +139,7 @@ sub interface_up {
     } else {
         $$self{m}->error('ifup '.$device.'failed');
         $$self{m}->error($self->out);
+        exit 1;
     }
     return $ip;
 }
@@ -183,6 +195,7 @@ sub remove_virtual_network {
     my $cfg = '';
     my $device = '';
     my $obtained_ip = '';
+    $self->get_virtual_networks_config();
     foreach my $seq (sort keys %{$$self{ifcfgs}}) {
         if ($ip eq $$self{ifcfgs}->{$seq}->{obtained_ip}) {
             $cfg = $$self{ifcfgs}->{$seq}->{abs_path};
