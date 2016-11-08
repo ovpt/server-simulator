@@ -48,6 +48,7 @@ sub create_container {
 
     $name = $ip unless defined $name;
     my $cmd = "docker run -d -p $ip:443:443 --name $name $image";
+    $$self{m}->info("creating container image:$image ip:$ip name:$name");
     $self->exec($cmd);
     if (! $self->is_success) {
         $$self{m}->error('failed to create container');

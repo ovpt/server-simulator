@@ -34,7 +34,7 @@ sub get_virtual_networks_config {
     my $cmd = 'ls '.$abs_path.'ifcfg-'.$self->interface.':*';
     my @ifcfgs;
     $self->exec($cmd);
-    if ($self->out) {
+    if ($self->is_success && $self->out) {
         @ifcfgs = split('\s+', $self->out);
     }
     foreach my $cfg (@ifcfgs) {
@@ -90,6 +90,30 @@ sub create_virtual_network {
     %{$$self{ifcfgs}->{$next_seq}} = (device=>$device, abs_path=>$new_cfg, obtained_ip=>'');
     my $obtained_ip = $self->interface_up($device);
     $self->exec("echo '#obtained_ip=$obtained_ip' >> $new_cfg");
+    $self->update_virtual_network_cfg_file($device, $obtained_ip);
+    $self->interface_down($device);
+    return $self->interface_up($device);
+}
+
+sub update_virtual_network_cfg_file {
+    my ($self, $device, $ip) = @_;
+    my $cfg = $$self{cfg_path}.'ifcfg-'.$device;
+    $$self{m}->info("updat interface file, set bootproto to static"); 
+    open (my $fh, '>', $cfg);
+
+    # hardcoded, need refactor
+    print $fh "BOOTPROTO=static\n";
+    print $fh "DEFROUTE=yes\n";
+    print $fh "PEERDNS=yes\n";
+    print $fh "PEERROUTES=yes\n";
+    print $fh "IPV4_FAILURE_FATAL=no\n";
+    print $fh "DEVICE=$device\n";
+    print $fh "ONBOOT=yes\n";
+    print $fh "IPADDR=$ip\n";
+    print $fh "NETMASK=255.255.252.0\n";
+    print $fh "GATEWAY=15.114.112.1\n";
+    print $fh "DNS=16.110.135.51\n";
+    close $fh;
 }
 
 sub interface_up {
