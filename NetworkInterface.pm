@@ -37,10 +37,10 @@ sub get_virtual_networks_config {
     if ($self->is_success && $self->out) {
         @ifcfgs = split('\s+', $self->out);
     }
+    $$self{m}->info('reading interface configuration '.$$self{cfg_path});
     foreach my $cfg (@ifcfgs) {
         my %virt_net = (device=>'',abs_path=>$cfg, obtained_ip=>'');
         my $seq = '';
-        $$self{m}->info('reading configuration '.$cfg);
         open (my $fh, '<', $cfg);
         while (<$fh>) {
             chomp;

@@ -60,6 +60,7 @@ sub create_httpd_ssl_conf {
     push @conf_new_lines, qq(Substitute "s/172.18/$dcs_ip_prefix/");
     push @conf_new_lines, qq(Substitute "s/16.125.106.80/$ip/");
     push @conf_new_lines, qq(Substitute "s/\\"principalSwitch\\":\\".{8}/\\"principalSwitch\\":\\"$san_principal_switch/");
+    push @conf_new_lines, qq(Substitute "s/\\"serialNumber\\":\\"VMware-.{6}/\\"serialNumber\\":\\"VMware-$serial_number/");
     push @conf_new_lines, qq(Substitute "s/\\"wwn\\":\\"DC:(.{11}):.{8}/\\"wwn\\":\\"DC:\$1:$volume_wwn/");
 
     # read serial number
@@ -145,7 +146,9 @@ if (defined $option{l}) {
 if (defined $option{r}) {
     usage() unless $option{r};
     # stop container
+    $docker->stop_container("$docker_image-$option{r}");
     # remove container
+    $docker->remove_container("$docker_image-$option{r}");
     # remove virtual network
     $net->remove_virtual_network($option{r});
 }
