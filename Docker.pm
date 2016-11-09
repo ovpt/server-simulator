@@ -167,7 +167,6 @@ sub start_container {
         $$self{m}->error("failed to start container $container");
         return 0;
     }
-    
 }
 
 sub stop_container {
@@ -180,14 +179,33 @@ sub stop_container {
     my $cmd = "docker stop $container";
     $$self{m}->info("stopping container $container");
     $self->exec($cmd);
-    if ($self->is_container_running($container)) {
+    if (! $self->is_container_running($container)) {
         $$self{m}->info("container $container is stopped");
         return 1;
     } else {
         $$self{m}->error("failed to stop container $container");
         return 0;
     }
-    
 }
+
+sub remove_container {
+    my ($self, $container) = @_;
+    if (! $self->is_container_running($container)) {
+        $$self{m}->info("container $container is already stopped");
+        return 1;
+    }
+
+    my $cmd = "docker rm $container";
+    $$self{m}->info("removing container $container");
+    $self->exec($cmd);
+    if (! $self->container_exist($container)) {
+        $$self{m}->info("container $container was removed");
+        return 1;
+    } else {
+        $$self{m}->error("failed to remove container $container");
+        return 0;
+    }
+}
+
 
 1;
