@@ -190,8 +190,8 @@ sub stop_container {
 
 sub remove_container {
     my ($self, $container) = @_;
-    if (! $self->is_container_running($container)) {
-        $$self{m}->info("container $container is already stopped");
+    if ($self->is_container_running($container)) {
+        $$self{m}->info("container $container is not stopped");
         return 1;
     }
 
