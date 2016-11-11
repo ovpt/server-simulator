@@ -59,7 +59,7 @@ sub create_httpd_ssl_conf {
     push @conf_new_lines, qq(Substitute "s/ci-005056a52e8a/$server_name/");
     push @conf_new_lines, qq(Substitute "s/172.18/$dcs_ip_prefix/");
     push @conf_new_lines, qq(Substitute "s/16.125.106.80/$ip/");
-    push @conf_new_lines, qq(Substitute "s/\\"principalSwitch\\":\\".{8}/\\"principalSwitch\\":\\"$san_principal_switch/");
+    push @conf_new_lines, qq(Substitute "s/\\"principalSwitch\\":\\"(.{15}).{8}/\\"principalSwitch\\":\\"\$1$san_principal_switch/");
     push @conf_new_lines, qq(Substitute "s/\\"serialNumber\\":\\"VMware-.{6}/\\"serialNumber\\":\\"VMware-$serial_number/");
     push @conf_new_lines, qq(Substitute "s/\\"wwn\\":\\"DC:(.{11}):.{8}/\\"wwn\\":\\"DC:\$1:$volume_wwn/");
 
@@ -85,7 +85,7 @@ sub create_httpd_ssl_conf {
     close $fh;
 
     # create new conf file
-    open($fh, '>', $new_conf) or die "$1";
+    open($fh, '>', $new_conf) or die "$!";
     foreach my $line (0..$#ssl_conf_lines) {
         print $fh "$ssl_conf_lines[$line]\n";
 
