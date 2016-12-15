@@ -27,8 +27,8 @@ my $docker = Docker->new(m=>$m);
 
 sub usage {
     print "usage: $0 options\n";
-    print "\t-l list all proxy servers\n";
-    print "\t-c create a new prox server\n";
+    print "\t-c create a new container and forward request to the target OneView\n";
+    print "\t-t {target OneView IP}\n";
     print "\t-r remove a proxy server by ip\n";
     print "\n";
     exit 1;
@@ -44,7 +44,7 @@ sub validate_option {
 
 sub create_httpd_ssl_conf {
     # generate unique stings based on proxy server's ip address 
-    my $ip = shift;
+    my ($ip, $target_srv) = @_;
     my @numbers = split('\.', $ip);
     my @conf_new_lines;
     my $new_conf = "./conf/httpd-ssl.conf.$ip";
@@ -56,9 +56,11 @@ sub create_httpd_ssl_conf {
     my $san_principal_switch = join(':', $serial_number =~ /(\d{2})/g);
     my $volume_wwn = $san_principal_switch;
 
+    push @conf_new_lines, qq(ProxyPass / https://$target_srv/);
+    push @conf_new_lines, qq(ProxyPassReverse / https://$target_srv/);
     push @conf_new_lines, qq(Substitute "s/ci-005056a52e8a/$server_name/");
     push @conf_new_lines, qq(Substitute "s/172.18/$dcs_ip_prefix/");
-    push @conf_new_lines, qq(Substitute "s/16.125.106.80/$ip/");
+    push @conf_new_lines, qq(Substitute "s/$target_srv/$ip/");
     push @conf_new_lines, qq(Substitute "s/\\"principalSwitch\\":\\"(.{15}).{8}/\\"principalSwitch\\":\\"\$1$san_principal_switch/");
     push @conf_new_lines, qq(Substitute "s/\\"serialNumber\\":\\"VMware-.{6}/\\"serialNumber\\":\\"VMware-$serial_number/");
     push @conf_new_lines, qq(Substitute "s/\\"wwn\\":\\"DC:(.{11}):.{8}/\\"wwn\\":\\"DC:\$1:$volume_wwn/");
@@ -102,23 +104,29 @@ sub create_httpd_ssl_conf {
 
 # main
 my %option;
-getopts('lcr:', \%option) or usage();
+getopts('lcr:t:', \%option) or usage();
 validate_option(\%option);
 
 # create new proxy server
 if (defined $option{c}) {
+    if (! defined $option{t}) {
+        print "please specify the target OneView IP address\n";
+        usage();
+    }
     if (! $docker->is_image_exist('ov-proxy')) {
         $m->error("docker image $docker_image not exist");
         exit 1;
     }
 
+    # target OneView appliance IP address
+    my $target_srv = $option{t};
+
     # create new virtual network
-    #my $ip = '15.114.114.35';
     my $ip = $net->create_virtual_network();
     my $container_name = "$docker_image-$ip";
 
     # create httpd ssl conf
-    my $httpd_ssl_conf = create_httpd_ssl_conf($ip);
+    my $httpd_ssl_conf = create_httpd_ssl_conf($ip, $target_srv);
 
     # create server certificate and key
     $cert->create_key_and_cert($ip);

@@ -292,7 +292,5 @@ SSLProxyEngine On
 RewriteEngine On
 AddOutputFilterByType SUBSTITUTE application/json
 
-ProxyPass / https://16.125.106.80/
-ProxyPassReverse / https://16.125.106.80/
 
 </VirtualHost>                                  
