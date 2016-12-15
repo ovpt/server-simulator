@@ -26,7 +26,7 @@ my $cert = Certificate->new(m=>$m);
 my $docker = Docker->new(m=>$m);
 
 sub usage {
-    print "usage: $0 options\n";
+    print "\nusage: $0 options\n";
     print "\t-c create a new container and forward request to the target OneView\n";
     print "\t-t {target OneView IP}\n";
     print "\t-r remove a proxy server by ip\n";
@@ -110,7 +110,7 @@ validate_option(\%option);
 # create new proxy server
 if (defined $option{c}) {
     if (! defined $option{t}) {
-        print "please specify the target OneView IP address\n";
+        $m->error("please specify the target OneView IP address");
         usage();
     }
     if (! $docker->is_image_exist('ov-proxy')) {
