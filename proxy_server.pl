@@ -58,7 +58,7 @@ sub create_httpd_ssl_conf {
 
     push @conf_new_lines, qq(ProxyPass / https://$target_srv/);
     push @conf_new_lines, qq(ProxyPassReverse / https://$target_srv/);
-    push @conf_new_lines, qq(Substitute "s/ci-005056a52e8a/$server_name/");
+    push @conf_new_lines, qq(Substitute "s/\\"hostname\\":\\"ci-.{11}/\\"hostname\\":\\"proxy-$serial_number/");
     push @conf_new_lines, qq(Substitute "s/172.18/$dcs_ip_prefix/");
     push @conf_new_lines, qq(Substitute "s/$target_srv/$ip/");
     push @conf_new_lines, qq(Substitute "s/\\"principalSwitch\\":\\"(.{15}).{8}/\\"principalSwitch\\":\\"\$1$san_principal_switch/");
