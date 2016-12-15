@@ -1,4 +1,4 @@
-A customized httpd proxy server Dockerfiles used to forward requests and substitute response to OneView
+A customized httpd proxy server Dockerfiles used to forward requests and substitute response to OneView.
 
 
 ```
@@ -10,11 +10,13 @@ usage: proxy_server.pl options
 ```
 
 Examples:
- * create a new container and forwadrd request to 16.125.106.80
+ * create a new container and forwadrd request to 16.125.106.80. It will request an IP from DHCP server and bind container 443 port to it. This is working and tested in Shanghai's Lab.
+
  ```
  # perl proxy_server.pl -c -t 16.125.106.80
  ```
  * remove the contianer which bind to IP 15.114.114.64 
+
  ```
  # perl proxy_server.pl -r 15.114.114.64
  ```
