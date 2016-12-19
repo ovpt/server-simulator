@@ -27,9 +27,19 @@ my $docker = Docker->new(m=>$m);
 
 sub usage {
     print "\nusage: $0 options\n";
-    print "\t-c create a new container and forward request to the target OneView\n";
-    print "\t-t {target OneView IP}\n";
-    print "\t-r remove a proxy server by ip\n";
+    print "       $0 -t OV_IP -c [CONTAINER_IP|DHCP]\n";
+    print "       $0 -r CONTAINER_IP\n";
+    print "\n";
+    print "\t-t ONEVIEW_IP\n";
+    print "\t\tThe target OneView IP address.\n";
+    print "\t-c [CONTAINER_IP|DHCP]\n";
+    print "\t\tCreate a new container and forward request to the target OneView.\n";
+    print "\t\tThe CONTAINER_IP is the IP address you want to bind 443 port to.\n";
+    print "\t\tUse DHCP if your network is 15.xx.\n";
+    print "\t\tSpecify an IP if your network is 16.xx since it could not request\n";
+    print "\t\tmultiple IP address from DHCP server for one network interface.\n";
+    print "\t-r CONTAINER_IP\n";
+    print "\t\tRemove a proxy server by ip\n";
     print "\n";
     exit 1;
 }
@@ -104,7 +114,7 @@ sub create_httpd_ssl_conf {
 
 # main
 my %option;
-getopts('lcr:t:', \%option) or usage();
+getopts('lc:r:t:', \%option) or usage();
 validate_option(\%option);
 
 # create new proxy server
@@ -122,7 +132,13 @@ if (defined $option{c}) {
     my $target_srv = $option{t};
 
     # create new virtual network
-    my $ip = $net->create_virtual_network();
+    my $ip;
+    if ($option{c} =~ /^DHCP$/i) {
+        $ip = $net->create_virtual_network();
+    } else {
+        $ip = $option{c};
+    }
+
     my $container_name = "$docker_image-$ip";
 
     # create httpd ssl conf
