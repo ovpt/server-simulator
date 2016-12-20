@@ -9,146 +9,77 @@ BEGIN {unshift @INC, getcwd()}
 
 use Message;
 use Command;
-use NetworkInterface;
 use Certificate;
 use Docker;
+use HttpdSSLConf;
 
-
-# global variables
-my $docker_image = 'ov-proxy';
-my $ssl_conf = './template/httpd-ssl.conf.sample';
-my $storage_serial_number = './template/storage_systems_serial_number';
 
 my $m = Message->new(level=>'info');
 my $r = Command->new(m=>$m);
-my $net = NetworkInterface->new(m=>$m);
 my $cert = Certificate->new(m=>$m);
 my $docker = Docker->new(m=>$m);
+my $httpd_conf = HttpdSSLConf->new(m=>$m);
 
 sub usage {
     print "\nusage: $0 options\n";
-    print "       $0 -t OV_IP -c [CONTAINER_IP|DHCP]\n";
-    print "       $0 -r CONTAINER_IP\n";
+    print "       $0 -t TARGET_SERVER -c CONTAINER_IP\n";
+    print "       $0 -i IMAGE_NAME\n";
     print "\n";
-    print "\t-t ONEVIEW_IP\n";
-    print "\t\tThe target OneView IP address.\n";
-    print "\t-c [CONTAINER_IP|DHCP]\n";
-    print "\t\tCreate a new container and forward request to the target OneView.\n";
+    print "\t-t TARGET_SERVER\n";
+    print "\t\tThe target server's IP address.\n";
+    print "\t-i IMAGE_NAME\n";
+    print "\t\tThe docker image.\n";
+    print "\t-c CONTAINER_IP\n";
+    print "\t\tCreate a new container and forward request to the target server.\n";
     print "\t\tThe CONTAINER_IP is the IP address you want to bind 443 port to.\n";
-    print "\t\tUse DHCP if your network is 15.xx.\n";
-    print "\t\tSpecify an IP if your network is 16.xx since it could not request\n";
-    print "\t\tmultiple IP address from DHCP server for one network interface.\n";
-    print "\t-r CONTAINER_IP\n";
-    print "\t\tRemove a proxy server by ip\n";
     print "\n";
     exit 1;
 }
 
 sub validate_option {
     my $option = shift;
-    if (! defined $option->{l} && ! defined $option->{c} && ! defined $option->{r}) {
+    if (! defined $option->{t} && ! defined $option->{c} && ! defined $option->{r}) {
         usage();
     }
     1;
 }
 
-sub create_httpd_ssl_conf {
-    # generate unique stings based on proxy server's ip address 
-    my ($ip, $target_srv) = @_;
-    my @numbers = split('\.', $ip);
-    my @conf_new_lines;
-    my $new_conf = "./conf/httpd-ssl.conf.$ip";
-    $m->info("creating new httpd ssl conf $new_conf");
-
-    my $server_name = "proxy-$ip";
-    my $serial_number = substr(join('', split('\.', $ip)), -6);
-    my $dcs_ip_prefix = $numbers[-2].'.'.$numbers[-1];
-    my $san_principal_switch = join(':', $serial_number =~ /(\d{2})/g);
-    my $volume_wwn = $san_principal_switch;
-
-    push @conf_new_lines, qq(ProxyPass / https://$target_srv/);
-    push @conf_new_lines, qq(ProxyPassReverse / https://$target_srv/);
-    push @conf_new_lines, qq(Substitute "s/\\"hostname\\":\\"ci-.{11}/\\"hostname\\":\\"proxy-$serial_number/");
-    push @conf_new_lines, qq(Substitute "s/172.18/$dcs_ip_prefix/");
-    push @conf_new_lines, qq(Substitute "s/$target_srv/$ip/");
-    push @conf_new_lines, qq(Substitute "s/\\"principalSwitch\\":\\"(.{15}).{8}/\\"principalSwitch\\":\\"\$1$san_principal_switch/");
-    push @conf_new_lines, qq(Substitute "s/\\"serialNumber\\":\\"VMware-.{6}/\\"serialNumber\\":\\"VMware-$serial_number/");
-    push @conf_new_lines, qq(Substitute "s/\\"wwn\\":\\"DC:(.{11}):.{8}/\\"wwn\\":\\"DC:\$1:$volume_wwn/");
-
-    # read serial number
-    my $id = 1;
-    open(my $fh, '<', $storage_serial_number) or die "$!";
-    while (<$fh>) {
-        chomp;
-        my $seq = $id;
-        $seq = '0'.$seq if $id < 10;
-        push @conf_new_lines, qq(Substitute "s/$_/TX$serial_number$seq/");
-        push @conf_new_lines, qq(RewriteRule ^(/rest/storage-systems)/TX$serial_number$seq \$1/$_ [R]); 
-        $id += 1;
-    }
-    close $fh;
-
-    my @ssl_conf_lines;
-    open($fh, '<', $ssl_conf) or die "$!"; 
-    while (<$fh>) {
-        chomp;
-        push @ssl_conf_lines, $_;
-    }
-    close $fh;
-
-    # create new conf file
-    open($fh, '>', $new_conf) or die "$!";
-    foreach my $line (0..$#ssl_conf_lines) {
-        print $fh "$ssl_conf_lines[$line]\n";
-
-        if (defined $ssl_conf_lines[$line+1] && $ssl_conf_lines[$line+1] =~ /<\/VirtualHost>/) {
-            # add newlines before end of virtual host
-            foreach my $new_line (@conf_new_lines) {
-                print $fh "$new_line\n";
-            }
-        }
-    }
-    close $fh;
-    return $new_conf;
-}
 
 # main
 my %option;
-getopts('lc:r:t:', \%option) or usage();
+getopts('c:i:r:t:', \%option) or usage();
 validate_option(\%option);
 
 # create new proxy server
 if (defined $option{c}) {
     if (! defined $option{t}) {
-        $m->error("please specify the target OneView IP address");
+        $m->error("please specify the target server IP address");
         usage();
     }
-    if (! $docker->is_image_exist('ov-proxy')) {
-        $m->error("docker image $docker_image not exist");
-        exit 1;
-    }
 
-    # target OneView appliance IP address
-    my $target_srv = $option{t};
-
-    # create new virtual network
-    my $ip;
-    if ($option{c} =~ /^DHCP$/i) {
-        $ip = $net->create_virtual_network();
+    if (! defined $option{i}) {
+        $m->error("please specify the docker image");
+        usage();
     } else {
-        $ip = $option{c};
+        if (! $docker->is_image_exist($option{i})) {
+            $m->error("docker image $option{i}not exist");
+            exit 1;
+        }
     }
 
-    my $container_name = "$docker_image-$ip";
+    # target server appliance IP address
+    my $ip = $option{c};
+    my $target_srv = $option{t};
+    my $container_name = "$option{i}-$ip";
 
     # create httpd ssl conf
-    my $httpd_ssl_conf = create_httpd_ssl_conf($ip, $target_srv);
+    my $httpd_ssl_conf = $httpd_conf->create_httpd_ssl_conf($ip, $target_srv);
 
     # create server certificate and key
     $cert->create_key_and_cert($ip);
 
     # create container
-    $docker->create_container($docker_image, $ip, $container_name);
+    $docker->create_container($option{i}, $ip, $container_name);
 
     # copy server cert/key and httpd-ssl.conf to container
     $docker->cp_file_to_container('server.key', $container_name, '/usr/local/apache2/conf/');
@@ -162,17 +93,10 @@ if (defined $option{c}) {
     $docker->get_container_by_name($container_name);
 }
 
-# list proxy server
-if (defined $option{l}) {
-}
 
 # remove proxy server by ip
 if (defined $option{r}) {
     usage() unless $option{r};
     # stop container
-    $docker->stop_container("$docker_image-$option{r}");
     # remove container
-    $docker->remove_container("$docker_image-$option{r}");
-    # remove virtual network
-    $net->remove_virtual_network($option{r});
 }
