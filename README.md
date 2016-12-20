@@ -1,4 +1,4 @@
-A customized httpd proxy server used to forward requests to target server and substitute response.
+A customized httpd proxy server used to forward requests to target server and substitute response. It's easy to simulate one or more new https servers.
 
 
 ```
@@ -22,10 +22,12 @@ Examples:
  # perl proxy_server.pl -i image_proxy -t 172.18.1.90 -c 192.168.1.2
  ```
  * list container
+
  ```
  # docker ps -a
  ```
  * remove container
+
  ```
  # docker stop image_proxy-192.168.1.2
  # docker rm image_proxy-192.168.1.2
@@ -33,6 +35,9 @@ Examples:
 
 Notes:
 >Substitute rules can be customized from HttpdSSLConf.pm
+>
 >sub create_httpd_ssl_conf {
+>
 >...customized rules...
+>
 >}
