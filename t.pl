@@ -21,7 +21,7 @@ my $docker = Docker->new(m=>$m);
 
 #$net->get_virtual_networks_config();
 $net->create_virtual_network();
-$net->get_interface_ip();
+#$net->get_interface_ip();
 #$net->remove_virtual_network('');
 
 #$cert->create_key_and_cert('192.168.1.114');
